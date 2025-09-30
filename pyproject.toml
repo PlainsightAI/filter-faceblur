@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["filter_faceblur*"]
+
+[tool.setuptools.package-data]
+"filter_faceblur.model" = ["weights/**/*"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[project]
+name = "filter_faceblur"
+readme = "README.md"
+requires-python = ">=3.10, <3.14"
+license = "Apache-2.0"
+
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+dynamic = ["version"]
+
+dependencies = [
+  "python-dotenv==1.0.1",
+  "openfilter[all]>=0.1.0,<0.2.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "build==1.2.1",
+  "setuptools==72.2.0",
+  "twine>=6.1.0,<7",
+  "wheel==0.44.0",
+  "pytest==8.3.4",
+  "pytest-cov==6.0.0",
+]
+
+[[tool.uv.index]]
+name = "openfilter"
+url = "https://python.openfilter.io/simple"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"

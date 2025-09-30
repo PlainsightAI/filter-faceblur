@@ -1,0 +1,27 @@
+services:
+  video_in:
+    image: containers.openfilter.io/plainsightai/openfilter-video-in:v0.1.10
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      FILTER_ID: VideoIn
+      FILTER_SOURCES: file:///video.mp4!sync!loop
+      FILTER_OUTPUTS: tcp://*
+    volumes:
+      - ./data/video-01.mp4:/video.mp4:ro
+
+  faceblur_filter:
+    image: containers.openfilter.io/plainsightai/openfilter-faceblur:v1.1.4
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      FILTER_ID: FaceblurFilter
+      FILTER_SOURCES: tcp://video_in
+      FILTER_OUTPUTS: tcp://*
+
+  webvis:
+    image: containers.openfilter.io/plainsightai/openfilter-webvis:v0.1.10
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      FILTER_ID: Webvis
+      FILTER_SOURCES: tcp://faceblur_filter
+    ports:
+      - 8001:8000

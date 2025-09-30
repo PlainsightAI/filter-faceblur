@@ -1,0 +1,1 @@
+from filter_faceblur.model.detectors.base_detector import BaseDetector
