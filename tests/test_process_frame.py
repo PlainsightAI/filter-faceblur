@@ -9,7 +9,7 @@ These tests verify that:
 
 import pytest
 import numpy as np
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from openfilter.filter_runtime.filter import Frame
 from filter_faceblur.filter import FilterFaceblur, FilterFaceblurConfig
 from filter_faceblur.model.model import FaceBlur
