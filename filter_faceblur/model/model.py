@@ -51,13 +51,13 @@ class FaceBlur:
             )
         return cls
 
-    def process_frame(self, frame: np.ndarray, confidence_threshold: float = 0.25, blur_strength: float = 1.0) -> np.ndarray:
+    def process_frame(self, frame: np.ndarray, faces: list, blur_strength: float = 1.0) -> np.ndarray:
         """
         Applies face blurring to a frame.
 
         Args:
             frame: The frame to apply face blurring to.
-            confidence_threshold: Minimum confidence threshold for face detection.
+            faces: List of detected faces to blur.
             blur_strength: Strength of the blur effect (0.0 = no blur, 1.0 = default blur).
 
         Returns:
@@ -70,9 +70,6 @@ class FaceBlur:
         # Check if image is not None
         if frame is None:
             raise ValueError("Frame is None.")
-        
-
-        faces = self.detector.detect_faces(frame, confidence_threshold)
         
         # If blur strength is 0, return original frame without blurring
         if blur_strength <= 0:

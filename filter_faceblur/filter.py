@@ -221,7 +221,7 @@ class FilterFaceblur(Filter):
             if self.config.blur_enabled and self.config.blur_strength > 0:
                 if self.config.debug:
                     logger.info(f"Applying blur with strength {self.config.blur_strength} to {topic} frame")
-                output = self.face_blur.process_frame(frame.rw_bgr.image, self.config.detection_confidence_threshold, self.config.blur_strength)
+                output = self.face_blur.process_frame(frame.rw_bgr.image, faces, self.config.blur_strength)
             else:
                 # Skip blurring but still return the original frame
                 if self.config.debug:
