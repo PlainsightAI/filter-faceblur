@@ -2,7 +2,7 @@
 # Repo-specific variables
 # ---------------------------------
 
-IMAGE ?= us-west1-docker.pkg.dev/plainsightai-prod/oci/filter-faceblur
+IMAGE ?= plainsightai/openfilter-faceblur
 
 # Define these for consistency in the repo
 REPO_NAME ?= filter-faceblur
