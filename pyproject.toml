@@ -33,12 +33,12 @@ dynamic = ["version"]
 
 dependencies = [
   "python-dotenv==1.0.1",
-  "openfilter[all]>=0.1.0,<0.2.0"
+  "openfilter[all]>=0.1.27,<0.2.0"
 ]
 
 [project.optional-dependencies]
 dev = [
-  "build==1.2.1",
+  "build>=1.2.2",
   "setuptools==72.2.0",
   "twine>=6.1.0,<7",
   "wheel==0.44.0",
