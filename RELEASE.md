@@ -3,6 +3,13 @@ FaceGuard release notes
 
 ## [Unreleased]
 
+## v1.1.9 - 2026-04-23
+
+### Fixed
+- Re-release: v1.1.8 tag was created from PR branch (orphan), publish was skipped
+- Fix corrupted docker-compose.yaml (broken find-and-replace)
+- Update docker-compose builtins to 0.1.27, self-reference to DockerHub
+
 ## v1.1.8 - 2026-04-22
 
 ### Fixed
