@@ -3,6 +3,11 @@ FaceGuard release notes
 
 ## [Unreleased]
 
+## v1.1.8 - 2026-04-22
+
+### Fixed
+- Fix double face detection per frame — removed duplicate detection call that caused each face to appear twice in output
+
 ## v1.1.6 - 2026-04-20
 
 ### Changed
