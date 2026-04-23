@@ -14,9 +14,10 @@ def main():
 
     image = cv2.imread(input_image_path)
     if image is None:
-        print(f"Failed to read frame {input_image_path}")
+        raise SystemExit(f"Failed to read frame {input_image_path}")
 
-    processed_image = face_blur.process_frame(image)
+    faces = face_blur.detector.detect_faces(image)
+    processed_image = face_blur.process_frame(image, faces)
     cv2.imwrite(output_image_path, processed_image)
 
 if __name__ == "__main__":
