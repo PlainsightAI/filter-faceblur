@@ -32,7 +32,7 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
-  "python-dotenv==1.0.1",
+  "python-dotenv==1.2.2",
   "openfilter[all]>=0.1.30,<0.2.0"
 ]
 
