@@ -33,7 +33,7 @@ dynamic = ["version"]
 
 dependencies = [
   "python-dotenv==1.0.1",
-  "openfilter[all]>=0.1.27,<0.2.0"
+  "openfilter[all]>=0.1.30,<0.2.0"
 ]
 
 [project.optional-dependencies]
