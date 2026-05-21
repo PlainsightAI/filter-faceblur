@@ -9,6 +9,8 @@ FaceGuard release notes.
 
 ### Fixed
 - Make the pre-installed model weights directory writable by `appuser` so `YuNetDetector` can auto-download the face detection model on first run inside the container. The runtime `mkdir` into `/usr/local/lib/python3.11/site-packages/filter_faceblur/model/weights` previously failed under the non-root user with `PermissionError`, crashing `setup()`.
+- Rewrite `YuNetDetector._autodownload`: add the missing `return` after the OpenCV download path so execution no longer falls through into the JFrog branch (which double-downloaded the model to a hardcoded `filter_gaf/measurements/model/weights` path left over from a copy-paste), and route both branches through the chown'd `<pkg>/model/weights` dir.
+- Drop `shell=True` from the JFrog `curl` invocation in favour of an argv list, eliminating a command-injection vector through interpolated credentials and URL.
 
 ### Dependencies
 - Bump `python-dotenv` 1.0.1 → 1.2.2 (#4)

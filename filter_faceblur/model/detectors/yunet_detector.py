@@ -24,56 +24,39 @@ class YuNetDetector(BaseDetector):
             raise ValueError(f"Error downloading model: {e}")
             
             
-    def _autodownload(self, model_url, api_key=None, username=None):  
-        # Parse the model name from the URL
-        model_name = model_url.split('/')[-1]      
-        model_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-        model_dir = os.path.join(model_dir.parent, 'weights')    
-        model_path = os.path.join(model_dir, model_name)    
-        # Check if the model already exists locally
-        if Path(model_path).is_file():
-            print(f"Model artifact already exists at: {model_path}")    
-        
-            return model_path
-        
-        # Ensure the weights folder exists
-        Path(model_dir).mkdir(parents=True, exist_ok=True)
-        
-        if not ('jfrog' in model_url) and (api_key is None or username is None):
-            self._download_model_opencv(model_url, model_path)
-        
-        # Parse the model name from the URL
+    def _autodownload(self, model_url, api_key=None, username=None):
         model_name = model_url.split('/')[-1]
-        model_dir = "filter_gaf/measurements/model/weights"
-        model_path = os.path.join(model_dir, model_name)
-        
-        # Check if the model already exists locally
-        if Path(model_path).is_file():
+        weights_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent / 'weights'
+        model_path = weights_dir / model_name
+
+        if model_path.is_file():
             print(f"Model artifact already exists at: {model_path}")
-            
-            return model_path
+            return str(model_path)
 
-        # Ensure the weights folder exists
-        Path(model_dir).mkdir(parents=True, exist_ok=True)
+        weights_dir.mkdir(parents=True, exist_ok=True)
 
-        # Try to download the model from JFrog
+        if 'jfrog' in model_url and api_key and username:
+            self._download_model_jfrog(model_url, model_path, api_key, username)
+        else:
+            self._download_model_opencv(model_url, model_path)
+
+        return str(model_path)
+
+    def _download_model_jfrog(self, model_url, model_path, api_key, username):
         print(f"Downloading model from: {model_url}")
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-        }
-        curl_command = f'curl --fail -u {username}:{api_key} -L -o "{model_path}" "{model_url}"'
-        
+        # Avoid shell=True: credentials and URL are interpolated, so a stray
+        # shell metacharacter (e.g. a `$` in an API key) would be executed.
         try:
-            subprocess.run(curl_command, shell=True, check=True)
+            subprocess.run(
+                ['curl', '--fail', '-u', f'{username}:{api_key}', '-L',
+                 '-o', str(model_path), model_url],
+                check=True,
+            )
             print(f"Model artifact downloaded and saved at: {model_path}")
-        except subprocess.CalledProcessError as e:
-            # Remove the file if it was created
-            if os.path.exists(model_path):
-                os.remove(model_path)    
-            
+        except subprocess.CalledProcessError:
+            if model_path.exists():
+                model_path.unlink()
             raise RuntimeError(f"Error downloading model: {model_url}")
-                
-        return model_path
 
     def detect_faces(self, image, confidence_threshold=0.25):
         self.detector.setInputSize(image.shape[-3:-1][::-1])
