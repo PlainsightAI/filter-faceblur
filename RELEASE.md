@@ -1,4 +1,20 @@
-# v1.1.10
+# Changelog
+
+FaceGuard release notes.
+
+## v1.2.0 - 2026-05-21
+
+### Changed
+- Bump openfilter to `1.0.0` (major SDK release) (#11)
+
+### Fixed
+- Make the pre-installed model weights directory writable by `appuser` so `YuNetDetector` can auto-download the face detection model on first run inside the container. The runtime `mkdir` into `/usr/local/lib/python3.11/site-packages/filter_faceblur/model/weights` previously failed under the non-root user with `PermissionError`, crashing `setup()`.
+
+### Dependencies
+- Bump `python-dotenv` 1.0.1 → 1.2.2 (#4)
+- Bump `setuptools` 72.2.0 → 78.1.1 (dev) (#7)
+- Bump `pytest` 8.3.4 → 9.0.3 (dev) (#8)
+- Bump `wheel` 0.44.0 → 0.46.2 (dev) (#9)
 
 ## v1.1.10 - 2026-04-23
 
@@ -7,12 +23,6 @@
 
 - Fix release workflow secret names: `PYPI_API_TOKEN` → `PLAINSIGHT_PYPI_TOKEN`, `DOCKERHUB_TOKEN` → `DOCKERHUB_ACCESS_TOKEN` (org-level secret names). Without this the PyPI / Docker Hub tokens resolved to empty and no package has been published since the migration.
 - Bump openfilter dependency to `>=0.1.30`.
-
-# Changelog
-FaceGuard release notes
-- Bump openfilter to 1.0.0
-
-## [Unreleased]
 
 ## v1.1.9 - 2026-04-23
 
