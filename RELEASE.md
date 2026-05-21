@@ -2,10 +2,11 @@
 
 FaceGuard release notes.
 
-## [Unreleased]
+## v1.3.0 - 2026-05-21
 
 ### Changed
-- Bump openfilter to `1.1.0` (#13)
+- Bump openfilter to `1.1.0` (#13).
+- Update `docker-compose.yaml` and `docker-compose.local.yaml` builtin openfilter images (`openfilter-video-in`, `openfilter-webvis`) to `1.1.0` to match the SDK; pin `openfilter-faceblur` to `1.3.0`.
 
 ## v1.2.0 - 2026-05-21
 
