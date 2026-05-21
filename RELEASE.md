@@ -6,6 +6,7 @@ FaceGuard release notes.
 
 ### Changed
 - Bump openfilter to `1.0.0` (major SDK release) (#11)
+- Update `docker-compose.yaml` and `docker-compose.local.yaml` to the `1.0.0` builtin openfilter images (`openfilter-video-in`, `openfilter-webvis`) and pin `openfilter-faceblur` to `1.2.0`. The local compose file was also pointing at an older `v0.1.10` builtin tag that predates the main compose file's `0.1.27` — both now align on `1.0.0`.
 
 ### Fixed
 - Make the pre-installed model weights directory writable by `appuser` so `YuNetDetector` can auto-download the face detection model on first run inside the container. The runtime `mkdir` into `/usr/local/lib/python3.11/site-packages/filter_faceblur/model/weights` previously failed under the non-root user with `PermissionError`, crashing `setup()`.

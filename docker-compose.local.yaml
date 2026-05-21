@@ -1,6 +1,6 @@
 services:
   video_in:
-    image: containers.openfilter.io/plainsightai/openfilter-video-in:v0.1.10
+    image: containers.openfilter.io/plainsightai/openfilter-video-in:1.0.0
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-}
       FILTER_ID: VideoIn
@@ -22,7 +22,7 @@ services:
       FILTER_OUTPUTS: tcp://*
 
   webvis:
-    image: containers.openfilter.io/plainsightai/openfilter-webvis:v0.1.10
+    image: containers.openfilter.io/plainsightai/openfilter-webvis:1.0.0
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-}
       FILTER_ID: Webvis
