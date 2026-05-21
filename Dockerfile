@@ -23,6 +23,15 @@ RUN --mount=type=bind,source=VERSION,target=/tmp/VERSION,ro \
       --extra-index-url https://pypi.org/simple \
       "filter-faceblur==${PKG_VERSION}"
 
+# YuNetDetector auto-downloads the model into the installed package's
+# model/weights/ dir at runtime, which fails under the non-root appuser
+# because site-packages is owned by root. Pre-create the dir and hand
+# ownership to appuser so any configured model URL can be fetched on first run.
+RUN set -eux; \
+    WEIGHTS_DIR="$(python -c 'import os, filter_faceblur; print(os.path.join(os.path.dirname(filter_faceblur.__file__), "model", "weights"))')"; \
+    mkdir -p "$WEIGHTS_DIR"; \
+    chown -R appuser:appuser "$WEIGHTS_DIR"
+
 # Create a writable logs dir and hand over /app to appuser
 RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 
