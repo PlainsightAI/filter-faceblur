@@ -6,8 +6,8 @@ class FaceBlur:
     A class that applies face blurring to an image using a specified face detector and blurrer.
 
     Args:
-        detector_name (str): The name of the face detector to use. Available options are: "yunet".
-        blurrer_name (str): The name of the blurrer to use. Available options are: "gaussian".
+        detector_name (str): The name of the face detector to use. Available options are: "yunet", "haar", "dnn".
+        blurrer_name (str): The name of the blurrer to use. Available options are: "gaussian", "box", "median".
 
     Attributes:
         detector: An instance of the specified face detector.

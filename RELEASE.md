@@ -8,13 +8,18 @@ FaceGuard release notes.
 
 ### Fixed
 - Register `BoxBlur` and `MedianBlur` in the runtime `BLURRERS` registry. The config validator and the platform filter manifest both advertised `blurrer_name` in `['gaussian', 'box', 'median']`, but only `gaussian` was implemented — selecting `box` or `median` crashed `FaceBlur.__init__` with `ValueError: 'box' is not a valid key in the registry`. Both new blurrers mirror `GaussianBlur`'s elliptical-mask + `blur_strength`-scaled kernel pattern.
+- Register `HaarDetector` and `DnnDetector` in the runtime `DETECTORS` registry. Same class of bug as the blurrer side: `filter.py` validated `detector_name` against `['yunet', 'haar', 'dnn']` while only `yunet` was implemented, so picking `haar` or `dnn` crashed at construction with the same `ValueError`.
 
 ### Added
-- Contract test suite for all blurrers (`tests/test_blurrers.py`) and a registry/regression test (`tests/test_face_blur_registry.py`) that constructs `FaceBlur` against the real `BLURRERS` registry for each name — existing smoke tests mocked `FaceBlur` and never exercised the registry lookup, which is why the missing implementations went undetected.
+- `HaarDetector`: OpenCV-bundled `cv2.CascadeClassifier` frontal-face cascade. No download required — the XML ships with `opencv-python`. Confidence threshold is part of the contract but non-probabilistic; detections are emitted with `confidence=1.0`.
+- `DnnDetector`: OpenCV ResNet-SSD Caffe backend (`cv2.dnn.readNetFromCaffe`). Auto-downloads `deploy.prototxt` + `res10_300x300_ssd_iter_140000.caffemodel` into the package `weights/` directory on first use; URLs are overridable via `FILTER_DNN_PROTOTXT_URL` and `FILTER_DNN_CAFFEMODEL_URL`.
+- Contract test suite for all blurrers (`tests/test_blurrers.py`) and detectors (`tests/test_detectors.py`), plus a registry/regression test (`tests/test_face_blur_registry.py`) that constructs `FaceBlur` against the real `BLURRERS`/`DETECTORS` registries for every advertised name — the existing smoke tests mocked `FaceBlur` and never exercised the lookups, which is why the missing implementations went undetected.
 
 ### Changed
 - Bump openfilter to `1.1.1` (#15).
 - Pin `openfilter-faceblur` to `1.4.0` in `docker-compose.yaml`.
+- README: enumerate the supported `FILTER_DETECTOR_NAME` / `FILTER_BLURRER_NAME` values; document the new DNN env vars.
+- `model.py` class docstring: list all detector/blurrer options.
 
 ## v1.3.0 - 2026-05-21
 

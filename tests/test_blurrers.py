@@ -96,8 +96,7 @@ class TestMedianBlurKernelConstraint:
         assert out.shape == image.shape
 
     def test_even_scaled_kernel_is_bumped_to_odd(self, image, face):
-        # base 99 * 0.5 = 49 (odd) — pick a strength that yields an even int
-        # before correction: 0.4 * 99 = 39 (odd), 0.5 * 99 = 49 (odd) ...
-        # use 0.02 * 99 = 1 -> floored to 3.
-        out = MedianBlur().blur(image.copy(), face, blur_strength=0.02)
+        # 0.045 * 99 = 4.455 -> int(4) is even; the +1 bump must produce 5
+        # before cv2.medianBlur is called (it rejects even ksize).
+        out = MedianBlur().blur(image.copy(), face, blur_strength=0.045)
         assert out.shape == image.shape
