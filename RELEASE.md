@@ -4,9 +4,17 @@ FaceGuard release notes.
 
 ## [Unreleased]
 
-### Changed
+## v1.4.0 - 2026-06-08
 
-- Bump openfilter to 1.1.1
+### Fixed
+- Register `BoxBlur` and `MedianBlur` in the runtime `BLURRERS` registry. The config validator and the platform filter manifest both advertised `blurrer_name` in `['gaussian', 'box', 'median']`, but only `gaussian` was implemented — selecting `box` or `median` crashed `FaceBlur.__init__` with `ValueError: 'box' is not a valid key in the registry`. Both new blurrers mirror `GaussianBlur`'s elliptical-mask + `blur_strength`-scaled kernel pattern.
+
+### Added
+- Contract test suite for all blurrers (`tests/test_blurrers.py`) and a registry/regression test (`tests/test_face_blur_registry.py`) that constructs `FaceBlur` against the real `BLURRERS` registry for each name — existing smoke tests mocked `FaceBlur` and never exercised the registry lookup, which is why the missing implementations went undetected.
+
+### Changed
+- Bump openfilter to `1.1.1` (#15).
+- Pin `openfilter-faceblur` to `1.4.0` in `docker-compose.yaml`.
 
 ## v1.3.0 - 2026-05-21
 
