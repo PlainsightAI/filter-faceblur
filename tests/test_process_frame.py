@@ -133,6 +133,62 @@ class TestProcessFrame:
         result = face_blur.process_frame(sample_image, faces, blur_strength=0.5)
         face_blur.blurrer.blur.assert_called_once_with(sample_image, [10, 10, 30, 30], 0.5)
 
+    def test_accumulates_output_through_copy_returning_blurrer(self, face_blur, sample_image):
+        """Every blurrer today mutates in place, but the loop must thread the
+        accumulating output through each blurrer call so a future copy-
+        returning blurrer cannot silently drop every face but the last.
+        """
+        # Mock blurrer returns a NEW array per call rather than mutating —
+        # the copy-returning case the reviewer flagged.
+        counter = {"n": 0}
+        def fake_blur(image, bbox, strength):
+            counter["n"] += 1
+            # Each call returns a distinct array tagged by call index in [0,0,0].
+            tagged = image.copy()
+            tagged[0, 0, 0] = counter["n"]
+            return tagged
+        face_blur.blurrer.blur.side_effect = fake_blur
+
+        faces = [
+            {"bbox": [10, 10, 30, 30], "confidence": 0.9},
+            {"bbox": [60, 60, 30, 30], "confidence": 0.9},
+            {"bbox": [120, 120, 30, 30], "confidence": 0.9},
+        ]
+        result = face_blur.process_frame(sample_image, faces, blur_strength=1.0)
+
+        # All three faces must have been blurred (counter is 3) AND the result
+        # must be the array from the LAST call. If the loop had passed `frame`
+        # to every call (the bug), the second/third results would have been
+        # discarded copies of the original frame, not accumulated.
+        assert counter["n"] == 3
+        assert result[0, 0, 0] == 3
+
+        # The image fed into call N+1 must be the OUTPUT of call N, not the
+        # original frame. Verify by checking call args.
+        calls = face_blur.blurrer.blur.call_args_list
+        # Call 1's input is the original frame.
+        assert calls[0].args[0] is sample_image
+        # Calls 2+ take the previous call's return value (different object).
+        for i, c in enumerate(calls[1:], start=1):
+            assert c.args[0] is not sample_image, f"call {i+1} got original frame"
+            assert c.args[0][0, 0, 0] == i, f"call {i+1} input does not match call {i} output"
+
+    def test_out_of_bounds_faces_clamped_before_blurrer(self, face_blur, sample_image):
+        """Defense-in-depth: callers who hit FaceBlur.process_frame directly
+        (e.g. scripts/model_usage.py) must also get the safety clamp — the
+        blurrer never sees a negative-coord bbox that would silently collapse
+        the slice and leave the face unblurred.
+        """
+        faces = [
+            {"bbox": [-5, -3, 50, 60], "confidence": 0.95},
+            {"bbox": [-50, 50, 20, 30], "confidence": 0.60},   # fully outside -> dropped
+        ]
+        face_blur.process_frame(sample_image, faces, blur_strength=1.0)
+
+        # Only the in-frame face was passed to the blurrer, and with clamped coords.
+        assert face_blur.blurrer.blur.call_count == 1
+        face_blur.blurrer.blur.assert_called_once_with(sample_image, [0, 0, 45, 57], 1.0)
+
     def test_blur_strength_passed_through(self, face_blur, sample_image):
         """Custom blur strength is forwarded to the blurrer."""
         faces = [{"bbox": [0, 0, 10, 10], "confidence": 0.9}]
@@ -162,6 +218,10 @@ class TestFilterSingleDetection:
         config_data.update(config_overrides)
         config = FilterFaceblur.normalize_config(config_data)
         filt = FilterFaceblur(config=config)
+        # filter.py calls self.face_blur.clamp_faces_to_frame(...) after
+        # detect_faces; wire the mock to the real static method so these
+        # tests exercise the orchestration-layer clamping for real.
+        mock_face_blur.clamp_faces_to_frame = FaceBlur.clamp_faces_to_frame
         with patch("filter_faceblur.model.FaceBlur") as cls:
             cls.return_value = mock_face_blur
             filt.setup(config)
@@ -192,9 +252,11 @@ class TestFilterSingleDetection:
         filt = self._setup_filter(mock_fb)
         filt.process({"main": sample_frame})
 
-        # Second arg to process_frame should be the detected faces list
+        # Second arg to process_frame should be the detected faces. The
+        # orchestration-layer clamp returns a new list (idempotent for
+        # in-bounds bboxes), so compare by value, not identity.
         args = mock_fb.process_frame.call_args
-        assert args[0][1] is detected
+        assert args[0][1] == detected
 
     def test_multiple_topics_each_detected_once(self, sample_frame):
         """Each image topic should trigger exactly one detect_faces call."""
@@ -247,7 +309,9 @@ class TestFilterSingleDetection:
 
         frame_data = output["main"].data
         assert frame_data["faces_detected"] == 2
-        assert frame_data["face_coordinates"] is detected
+        # The orchestration-layer clamp returns a new list (idempotent for
+        # in-bounds bboxes), so compare by value, not identity.
+        assert frame_data["face_coordinates"] == detected
         assert len(frame_data["face_details"]) == 2
         assert frame_data["face_details"][0]["confidence"] == 0.95
         assert frame_data["face_details"][1]["confidence"] == 0.70
@@ -309,3 +373,41 @@ class TestFilterSingleDetection:
         # [x, y, w, h] -> [x1, y1, x2, y2] = [10, 20, 60, 80]
         assert detections[0]["rois"] == [10, 20, 60, 80]
         assert detections[0]["confidence"] == 0.9
+
+    def test_out_of_bounds_bboxes_clamped_end_to_end(self, sample_frame):
+        """Privacy regression at the filter layer: when a detector emits a
+        face at the frame edge with negative x/y, the orchestration clamp
+        must run before both the blurrer call and the metadata build, so
+        the blurrer sees an in-bounds bbox (not size 0) and the ROI
+        metadata emitted to downstream filters carries clamped coords.
+        """
+        mock_fb = MagicMock()
+        # sample_image is 200x200. Negative x, overshoot width.
+        detected = [
+            {"bbox": [-5, -3, 50, 60], "confidence": 0.95},   # clamps to [0,0,45,57]
+            {"bbox": [180, 50, 30, 40], "confidence": 0.80},  # clamps to [180,50,20,40]
+            {"bbox": [-50, 50, 20, 30], "confidence": 0.60},  # fully outside -> dropped
+        ]
+        mock_fb.detector.detect_faces.return_value = detected
+        mock_fb.process_frame.return_value = sample_frame.rw_bgr.image
+
+        filt = self._setup_filter(mock_fb, include_face_coordinates=True)
+        output = filt.process({"main": sample_frame})
+
+        # Blurrer call: receives the clamped list (degenerate dropped).
+        clamped = [
+            {"bbox": [0, 0, 45, 57], "confidence": 0.95},
+            {"bbox": [180, 50, 20, 40], "confidence": 0.80},
+        ]
+        passed = mock_fb.process_frame.call_args[0][1]
+        assert passed == clamped
+
+        # Metadata: face_coordinates, face_details, and meta.detections must
+        # all reflect the clamped list. This is the privacy guarantee — no
+        # downstream consumer sees negative or overshoot coords.
+        frame_data = output["main"].data
+        assert frame_data["faces_detected"] == 2
+        assert frame_data["face_coordinates"] == clamped
+        # ROIs: [x1, y1, x2, y2] = [0,0,45,57] and [180,50,200,90]
+        rois = [d["rois"] for d in frame_data["meta"]["detections"]]
+        assert rois == [[0, 0, 45, 57], [180, 50, 200, 90]]
