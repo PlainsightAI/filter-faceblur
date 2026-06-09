@@ -48,6 +48,9 @@ The filter can be configured using environment variables:
 | `FILTER_INCLUDE_FACE_COORDINATES` | `True` | Include face coordinates in frame data |
 | `FILTER_DNN_PROTOTXT_URL` | OpenCV ResNet-SSD default | URL for the DNN detector's `.prototxt` (only used when `FILTER_DETECTOR_NAME=dnn`) |
 | `FILTER_DNN_CAFFEMODEL_URL` | OpenCV ResNet-SSD default | URL for the DNN detector's `.caffemodel` (only used when `FILTER_DETECTOR_NAME=dnn`) |
+| `FILTER_MODEL_SHA256` | unset | Optional SHA-256 (hex) of the YuNet ONNX. When set, the downloaded or cached file is verified before use; mismatch raises and removes the file so the next attempt re-downloads. |
+| `FILTER_DNN_PROTOTXT_SHA256` | unset | Optional SHA-256 (hex) of the DNN `.prototxt`. Same semantics as `FILTER_MODEL_SHA256`. |
+| `FILTER_DNN_CAFFEMODEL_SHA256` | unset | Optional SHA-256 (hex) of the DNN `.caffemodel`. Same semantics as `FILTER_MODEL_SHA256`. |
 
 ### Viewing Results
 

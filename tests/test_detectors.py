@@ -206,3 +206,39 @@ class TestDnnDetector:
         ):
             det = DnnDetector(model_artifact="ignored")
         assert det.get_name() == "DnnDetector"
+
+
+class TestDnnDetectorSha256:
+    """Integration tests for SHA-256 wiring in DnnDetector.__init__.
+
+    The hash itself is exercised by tests/test_verify_sha256.py via the
+    shared helper. Here we verify that env vars flow through correctly.
+    """
+
+    def test_init_reads_sha256_env_vars(self, monkeypatch):
+        monkeypatch.setenv("FILTER_DNN_PROTOTXT_SHA256", "abc")
+        monkeypatch.setenv("FILTER_DNN_CAFFEMODEL_SHA256", "def")
+        with patch.object(DnnDetector, "_download") as mock_dl, patch(
+            "cv2.dnn.readNetFromCaffe", return_value=MagicMock()
+        ):
+            DnnDetector(model_artifact="ignored")
+            # Each _download call is _download(url, sha, label=...). Pair each
+            # call's positional sha with its keyword label.
+            shas_by_label = {
+                call.kwargs.get("label"): call.args[1]
+                for call in mock_dl.call_args_list
+            }
+            assert shas_by_label == {
+                "DNN prototxt": "abc",
+                "DNN caffemodel": "def",
+            }
+
+    def test_init_passes_none_when_env_vars_unset(self, monkeypatch):
+        monkeypatch.delenv("FILTER_DNN_PROTOTXT_SHA256", raising=False)
+        monkeypatch.delenv("FILTER_DNN_CAFFEMODEL_SHA256", raising=False)
+        with patch.object(DnnDetector, "_download") as mock_dl, patch(
+            "cv2.dnn.readNetFromCaffe", return_value=MagicMock()
+        ):
+            DnnDetector(model_artifact="ignored")
+            for call in mock_dl.call_args_list:
+                assert call.args[1] is None

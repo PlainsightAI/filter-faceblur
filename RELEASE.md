@@ -11,16 +11,19 @@ FaceGuard release notes.
 - Register `HaarDetector` and `DnnDetector` in the runtime `DETECTORS` registry. Same class of bug as the blurrer side: `filter.py` validated `detector_name` against `['yunet', 'haar', 'dnn']` while only `yunet` was implemented, so picking `haar` or `dnn` crashed at construction with the same `ValueError`.
 - Clamp every detector's bbox emissions to `[0, w]`/`[0, h]` at the orchestration layer (`FaceBlur.clamp_faces_to_frame`). Detectors can emit boxes extending past frame edges — verified for DNN where SSD outputs are not constrained to `[0, 1]`, and possible for YuNet/Haar on edge faces. Without clamping the blurrer's `image[y:y+h, x:x+w]` slice collapses on a negative start (size==0 early-return) and the detected face is silently left unblurred — a privacy failure for an anonymization filter. The clamp runs in two places: `filter.py.process` right after `detect_faces` so downstream ROI metadata (`face_coordinates`, `face_details`, `meta.detections.rois`) carries in-bounds values, and `FaceBlur.process_frame` as defense-in-depth for direct callers (e.g. `scripts/model_usage.py`). `DnnDetector` also clamps at emit time for the same reason; the orchestration clamp is idempotent.
 - `DnnDetector`: wrap network errors during model auto-download as `ValueError` so restricted-egress containers fail clearly instead of leaking a raw `URLError`, matching `YuNetDetector`'s pattern.
+- `YuNetDetector._postprocess`: change the confidence filter from `>` to `>=` so detections at exactly the threshold are kept. Aligns with `DnnDetector`'s semantics and matches the natural reading of "minimum confidence". Edge-case behavior change for callers passing detections whose confidence equals the threshold exactly.
+- `FaceBlur.process_frame`: thread the accumulating `output` through each blurrer call instead of passing the original `frame` every iteration. Every current blurrer mutates in place so the behavior is unchanged today, but a future copy-returning blurrer would have silently dropped every face except the last.
 
 ### Added
 - `HaarDetector`: OpenCV-bundled `cv2.CascadeClassifier` frontal-face cascade. No download required — the XML ships with `opencv-python`. Confidence threshold is part of the contract but non-probabilistic; detections are emitted with `confidence=1.0`.
 - `DnnDetector`: OpenCV ResNet-SSD Caffe backend (`cv2.dnn.readNetFromCaffe`). Auto-downloads `deploy.prototxt` + `res10_300x300_ssd_iter_140000.caffemodel` into the package `weights/` directory on first use; URLs are overridable via `FILTER_DNN_PROTOTXT_URL` and `FILTER_DNN_CAFFEMODEL_URL`.
+- Optional SHA-256 verification for model artifacts. When `FILTER_MODEL_SHA256` (YuNet ONNX), `FILTER_DNN_PROTOTXT_SHA256`, or `FILTER_DNN_CAFFEMODEL_SHA256` is set, the downloaded or cached file is hashed and verified before use; mismatch removes the offending file and raises `ValueError` so the next attempt is clean. Unset preserves the existing trust model — opt-in hardening for security-conscious operators.
 - Contract test suite for all blurrers (`tests/test_blurrers.py`) and detectors (`tests/test_detectors.py`), plus a registry/regression test (`tests/test_face_blur_registry.py`) that constructs `FaceBlur` against the real `BLURRERS`/`DETECTORS` registries for every advertised name — the existing smoke tests mocked `FaceBlur` and never exercised the lookups, which is why the missing implementations went undetected.
 
 ### Changed
 - Bump openfilter to `1.1.1` (#15).
 - Pin `openfilter-faceblur` to `1.4.0` in `docker-compose.yaml`.
-- README: enumerate the supported `FILTER_DETECTOR_NAME` / `FILTER_BLURRER_NAME` values; document the new DNN env vars.
+- README: enumerate the supported `FILTER_DETECTOR_NAME` / `FILTER_BLURRER_NAME` values; document the new DNN URL and SHA-256 env vars.
 - `model.py` class docstring: list all detector/blurrer options.
 
 ## v1.3.0 - 2026-05-21

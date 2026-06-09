@@ -5,7 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from filter_faceblur.model.detectors.base_detector import BaseDetector
+from filter_faceblur.model.detectors.base_detector import BaseDetector, verify_sha256
 
 
 class DnnDetector(BaseDetector):
@@ -38,11 +38,15 @@ class DnnDetector(BaseDetector):
         super().__init__(model_artifact, *args, **kwargs)
         prototxt_url = os.getenv("FILTER_DNN_PROTOTXT_URL", self.DEFAULT_PROTOTXT_URL)
         caffemodel_url = os.getenv("FILTER_DNN_CAFFEMODEL_URL", self.DEFAULT_CAFFEMODEL_URL)
-        prototxt_path = self._download(prototxt_url)
-        caffemodel_path = self._download(caffemodel_url)
+        # Optional SHA-256 verification; unset env vars preserve the existing
+        # trust model. See base_detector.verify_sha256.
+        prototxt_sha = os.getenv("FILTER_DNN_PROTOTXT_SHA256")
+        caffemodel_sha = os.getenv("FILTER_DNN_CAFFEMODEL_SHA256")
+        prototxt_path = self._download(prototxt_url, prototxt_sha, label="DNN prototxt")
+        caffemodel_path = self._download(caffemodel_url, caffemodel_sha, label="DNN caffemodel")
         self.detector = cv2.dnn.readNetFromCaffe(prototxt_path, caffemodel_path)
 
-    def _download(self, url):
+    def _download(self, url, expected_sha256=None, label="DNN artifact"):
         weights_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent / "weights"
         weights_dir.mkdir(parents=True, exist_ok=True)
         name = url.split("/")[-1]
@@ -53,6 +57,7 @@ class DnnDetector(BaseDetector):
                 urllib.request.urlretrieve(url, dest)
             except Exception as e:
                 raise ValueError(f"Error downloading DNN model: {e}")
+        verify_sha256(dest, expected_sha256, label=label)
         return str(dest)
 
     def detect_faces(self, image, confidence_threshold=0.25):

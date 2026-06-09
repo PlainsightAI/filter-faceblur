@@ -160,3 +160,60 @@ class TestJfrogDownload:
                    side_effect=subprocess.CalledProcessError(22, "curl")):
             with pytest.raises(RuntimeError):
                 detector._download_model_jfrog(JFROG_URL, model_path, "k", "u")
+
+
+class TestSha256Verification:
+    """When FILTER_MODEL_SHA256 is set, _autodownload verifies the artifact
+    before returning. Hits both the cache-hit path (file already on disk) and
+    the fresh-download path. Unset preserves the existing trust model.
+    """
+
+    def test_unset_env_skips_verification_on_cache_hit(
+        self, detector, monkeypatch
+    ):
+        monkeypatch.delenv("FILTER_MODEL_SHA256", raising=False)
+        monkeypatch.setattr(Path, "is_file", lambda self: True)
+        with patch(
+            "filter_faceblur.model.detectors.yunet_detector.verify_sha256"
+        ) as mock_verify:
+            detector._autodownload(GITHUB_URL)
+        # Helper is invoked but with no expected hash; the helper itself
+        # short-circuits on empty.
+        mock_verify.assert_called_once()
+        assert mock_verify.call_args.kwargs.get("label") == "YuNet ONNX"
+        assert mock_verify.call_args.args[1] is None
+
+    def test_set_env_invokes_verification_on_cache_hit(
+        self, detector, monkeypatch
+    ):
+        monkeypatch.setenv("FILTER_MODEL_SHA256", "abc123")
+        monkeypatch.setattr(Path, "is_file", lambda self: True)
+        with patch(
+            "filter_faceblur.model.detectors.yunet_detector.verify_sha256"
+        ) as mock_verify:
+            detector._autodownload(GITHUB_URL)
+        # Expected hash threaded through to the helper.
+        assert mock_verify.call_args.args[1] == "abc123"
+
+    def test_set_env_invokes_verification_after_fresh_download(
+        self, detector, monkeypatch
+    ):
+        monkeypatch.setenv("FILTER_MODEL_SHA256", "deadbeef")
+        monkeypatch.setattr(Path, "is_file", lambda self: False)
+        monkeypatch.setattr(Path, "mkdir", lambda self, **kw: None)
+        with patch.object(detector, "_download_model_opencv"), patch(
+            "filter_faceblur.model.detectors.yunet_detector.verify_sha256"
+        ) as mock_verify:
+            detector._autodownload(GITHUB_URL)
+        mock_verify.assert_called_once()
+        assert mock_verify.call_args.args[1] == "deadbeef"
+
+    def test_verification_failure_propagates(self, detector, monkeypatch):
+        monkeypatch.setenv("FILTER_MODEL_SHA256", "ff" * 32)
+        monkeypatch.setattr(Path, "is_file", lambda self: True)
+        with patch(
+            "filter_faceblur.model.detectors.yunet_detector.verify_sha256",
+            side_effect=ValueError("SHA-256 mismatch"),
+        ):
+            with pytest.raises(ValueError, match="SHA-256 mismatch"):
+                detector._autodownload(GITHUB_URL)
