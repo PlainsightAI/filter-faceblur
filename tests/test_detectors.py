@@ -116,6 +116,77 @@ class TestDnnDetector:
         # Image is 200x200; bbox normalized [0.1, 0.1, 0.5, 0.5] -> [20,20,40,40] in xywh
         assert f["bbox"] == [20, 20, 80, 80]
 
+    def test_detect_clamps_negative_coords(self, image):
+        """Privacy regression: SSD output for a face at the top-left edge can
+        decode to negative x1/y1. Without clamping, the emitted bbox makes the
+        blurrer's image[y:y+h, x:x+w] slice empty and the face is silently
+        left unblurred."""
+        with patch.object(DnnDetector, "_download", return_value="/tmp/fake"), patch(
+            "cv2.dnn.readNetFromCaffe", return_value=MagicMock()
+        ):
+            det = DnnDetector(model_artifact="ignored")
+
+        # Image is 200x200; normalized box [-0.025, -0.015, 0.225, 0.265]
+        # decodes to [-5, -3, 45, 53] -> after clamp [0, 0, 45, 53] -> xywh [0,0,45,53]
+        fake_out = np.zeros((1, 1, 1, 7), dtype=np.float32)
+        fake_out[0, 0, 0, 2:7] = [0.95, -0.025, -0.015, 0.225, 0.265]
+        det.detector.forward.return_value = fake_out
+
+        with patch("cv2.dnn.blobFromImage", return_value=np.zeros((1, 3, 300, 300))):
+            faces = det.detect_faces(image, confidence_threshold=0.5)
+
+        assert len(faces) == 1
+        x, y, w_, h_ = faces[0]["bbox"]
+        assert x >= 0 and y >= 0
+        assert x + w_ <= 200 and y + h_ <= 200
+        assert w_ > 0 and h_ > 0
+
+    def test_detect_clamps_overshoot_coords(self, image):
+        """Symmetric case: SSD output extending past the right/bottom edge
+        must be clamped to image bounds so downstream ROI consumers see
+        valid coordinates."""
+        with patch.object(DnnDetector, "_download", return_value="/tmp/fake"), patch(
+            "cv2.dnn.readNetFromCaffe", return_value=MagicMock()
+        ):
+            det = DnnDetector(model_artifact="ignored")
+
+        # Box overshoots both right (x2=1.1*200=220) and bottom (y2=1.05*200=210).
+        fake_out = np.zeros((1, 1, 1, 7), dtype=np.float32)
+        fake_out[0, 0, 0, 2:7] = [0.95, 0.7, 0.7, 1.1, 1.05]
+        det.detector.forward.return_value = fake_out
+
+        with patch("cv2.dnn.blobFromImage", return_value=np.zeros((1, 3, 300, 300))):
+            faces = det.detect_faces(image, confidence_threshold=0.5)
+
+        assert len(faces) == 1
+        x, y, w_, h_ = faces[0]["bbox"]
+        assert x + w_ <= 200 and y + h_ <= 200
+
+    def test_detect_drops_box_fully_outside_frame(self, image):
+        """If the clamped box is degenerate (zero or negative area), the
+        detection is dropped — there is no face to blur."""
+        with patch.object(DnnDetector, "_download", return_value="/tmp/fake"), patch(
+            "cv2.dnn.readNetFromCaffe", return_value=MagicMock()
+        ):
+            det = DnnDetector(model_artifact="ignored")
+
+        # Box entirely left of the frame.
+        fake_out = np.zeros((1, 1, 1, 7), dtype=np.float32)
+        fake_out[0, 0, 0, 2:7] = [0.95, -0.5, 0.1, -0.1, 0.5]
+        det.detector.forward.return_value = fake_out
+
+        with patch("cv2.dnn.blobFromImage", return_value=np.zeros((1, 3, 300, 300))):
+            assert det.detect_faces(image, confidence_threshold=0.5) == []
+
+    def test_download_wraps_network_errors(self):
+        """A raw urllib URLError leaks the network stack; YuNet wraps it as a
+        ValueError with the offending URL, and DNN should match that."""
+        with patch("urllib.request.urlretrieve", side_effect=OSError("boom")):
+            # Run only the _download method on a bare instance (skip __init__).
+            det = DnnDetector.__new__(DnnDetector)
+            with pytest.raises(ValueError, match="Error downloading DNN model"):
+                det._download("https://example/missing.caffemodel")
+
     def test_detect_empty_when_all_below_threshold(self, image):
         with patch.object(DnnDetector, "_download", return_value="/tmp/fake"), patch(
             "cv2.dnn.readNetFromCaffe", return_value=MagicMock()

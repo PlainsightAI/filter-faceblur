@@ -9,6 +9,8 @@ FaceGuard release notes.
 ### Fixed
 - Register `BoxBlur` and `MedianBlur` in the runtime `BLURRERS` registry. The config validator and the platform filter manifest both advertised `blurrer_name` in `['gaussian', 'box', 'median']`, but only `gaussian` was implemented — selecting `box` or `median` crashed `FaceBlur.__init__` with `ValueError: 'box' is not a valid key in the registry`. Both new blurrers mirror `GaussianBlur`'s elliptical-mask + `blur_strength`-scaled kernel pattern.
 - Register `HaarDetector` and `DnnDetector` in the runtime `DETECTORS` registry. Same class of bug as the blurrer side: `filter.py` validated `detector_name` against `['yunet', 'haar', 'dnn']` while only `yunet` was implemented, so picking `haar` or `dnn` crashed at construction with the same `ValueError`.
+- `DnnDetector`: clamp bboxes to `[0, w]`/`[0, h]` at emit time. SSD output is not constrained to `[0, 1]`, so faces at the frame edge could decode to negative or overshoot coordinates; the resulting bbox collapsed the blurrer's `image[y:y+h, x:x+w]` slice (size==0 early-return), silently leaving the detected face unblurred — a privacy failure for an anonymization filter.
+- `DnnDetector`: wrap network errors during model auto-download as `ValueError` so restricted-egress containers fail clearly instead of leaking a raw `URLError`, matching `YuNetDetector`'s pattern.
 
 ### Added
 - `HaarDetector`: OpenCV-bundled `cv2.CascadeClassifier` frontal-face cascade. No download required — the XML ships with `opencv-python`. Confidence threshold is part of the contract but non-probabilistic; detections are emitted with `confidence=1.0`.

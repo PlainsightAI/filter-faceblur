@@ -49,7 +49,10 @@ class DnnDetector(BaseDetector):
         dest = weights_dir / name
         if not dest.is_file():
             print(f"Downloading DNN artifact: {url}")
-            urllib.request.urlretrieve(url, dest)
+            try:
+                urllib.request.urlretrieve(url, dest)
+            except Exception as e:
+                raise ValueError(f"Error downloading DNN model: {e}")
         return str(dest)
 
     def detect_faces(self, image, confidence_threshold=0.25):
@@ -66,6 +69,17 @@ class DnnDetector(BaseDetector):
                 continue
             box = out[0, 0, i, 3:7] * np.array([w, h, w, h])
             x1, y1, x2, y2 = box.astype(int)
+            # SSD outputs are not constrained to [0, 1], so faces at the
+            # frame edge can decode to negative or overshoot coords. Without
+            # clamping the downstream blurrer slice image[y:y+h, x:x+w]
+            # collapses to size 0 and the detection is silently dropped —
+            # a privacy failure for an anonymization filter.
+            x1 = max(0, x1)
+            y1 = max(0, y1)
+            x2 = min(w, x2)
+            y2 = min(h, y2)
+            if x2 <= x1 or y2 <= y1:
+                continue
             faces.append(
                 {
                     "bbox": [int(x1), int(y1), int(x2 - x1), int(y2 - y1)],
