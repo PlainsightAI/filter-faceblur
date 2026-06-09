@@ -213,7 +213,12 @@ class FilterFaceblur(Filter):
                 
             # Detect faces and get coordinates
             faces = self.face_blur.detector.detect_faces(frame.rw_bgr.image, self.config.detection_confidence_threshold)
-            
+            # Clamp at the orchestration layer so the blurrer slice never
+            # collapses on a negative start AND downstream ROI metadata
+            # (face_coordinates, meta.detections.rois) carries the same
+            # in-bounds values.
+            faces = self.face_blur.clamp_faces_to_frame(faces, frame.rw_bgr.image.shape)
+
             if self.config.debug:
                 logger.info(f"Detected {len(faces)} faces in {topic} frame")
             

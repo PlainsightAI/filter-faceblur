@@ -117,3 +117,80 @@ def test_face_blur_rejects_unknown_detector():
     with all_detectors_stubbed():
         with pytest.raises(ValueError, match="not a valid key in the registry"):
             FaceBlur(model_artifact="unused", detector_name="bogus", blurrer_name="gaussian")
+
+
+class TestClampFacesToFrame:
+    """Cross-detector bbox safety net.
+
+    Detectors can emit bboxes that extend past the frame edges (verified for
+    DNN; also possible for YuNet/Haar on edge faces). Without clamping the
+    downstream blurrer slice collapses to size 0 on a negative start and the
+    face is silently left unblurred — a privacy failure for an anonymization
+    filter. clamp_faces_to_frame is the orchestration-layer safety net.
+    """
+
+    IMAGE_SHAPE = (200, 200, 3)
+
+    def test_in_bounds_passthrough_preserves_dict(self):
+        faces = [{"bbox": [10, 20, 50, 60], "confidence": 0.9}]
+        result = FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE)
+        assert result == [{"bbox": [10, 20, 50, 60], "confidence": 0.9}]
+
+    def test_in_bounds_passthrough_preserves_list_format(self):
+        # Bare 4-tuple format (backward compat path the blurrer still accepts).
+        faces = [[10, 20, 50, 60]]
+        result = FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE)
+        assert result == [[10, 20, 50, 60]]
+
+    def test_negative_x_clamped(self):
+        faces = [{"bbox": [-5, 20, 50, 60], "confidence": 0.9}]
+        result = FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE)
+        # Original x=-5, w=50 -> x2=45. Clamped: x1=0, x2=45 -> w=45.
+        assert result == [{"bbox": [0, 20, 45, 60], "confidence": 0.9}]
+
+    def test_negative_y_clamped(self):
+        faces = [{"bbox": [10, -3, 50, 60], "confidence": 0.9}]
+        result = FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE)
+        assert result == [{"bbox": [10, 0, 50, 57], "confidence": 0.9}]
+
+    def test_right_overshoot_clamped(self):
+        # x=180, w=30 -> x2=210, image w=200 -> clamp to 200, new w=20.
+        faces = [{"bbox": [180, 50, 30, 40], "confidence": 0.8}]
+        result = FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE)
+        assert result == [{"bbox": [180, 50, 20, 40], "confidence": 0.8}]
+
+    def test_bottom_overshoot_clamped(self):
+        faces = [{"bbox": [10, 180, 50, 30], "confidence": 0.7}]
+        result = FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE)
+        assert result == [{"bbox": [10, 180, 50, 20], "confidence": 0.7}]
+
+    def test_fully_outside_frame_dropped(self):
+        # Box entirely left of the frame: x=-50, w=20 -> x2=-30 -> clamp to 0
+        # -> x2(0) <= x1(0) -> drop.
+        faces = [{"bbox": [-50, 50, 20, 30], "confidence": 0.95}]
+        assert FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE) == []
+
+    def test_zero_dimension_dropped(self):
+        faces = [{"bbox": [10, 20, 0, 30], "confidence": 0.95}]
+        assert FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE) == []
+
+    def test_extra_dict_fields_preserved(self):
+        faces = [
+            {"bbox": [-2, 20, 50, 60], "confidence": 0.9, "tag": "a"},
+        ]
+        result = FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE)
+        assert result == [{"bbox": [0, 20, 48, 60], "confidence": 0.9, "tag": "a"}]
+
+    def test_empty_input(self):
+        assert FaceBlur.clamp_faces_to_frame([], self.IMAGE_SHAPE) == []
+
+    def test_handles_invalid_image_shape(self):
+        # Defensive: shape with < 2 dims falls through to a copy of the input.
+        faces = [{"bbox": [10, 20, 50, 60], "confidence": 0.9}]
+        assert FaceBlur.clamp_faces_to_frame(faces, ()) == faces
+        assert FaceBlur.clamp_faces_to_frame(faces, None) == faces
+
+    def test_skips_entries_without_bbox(self):
+        faces = [{"bbox": [10, 20, 50, 60]}, {"no_bbox": True}, [1, 2, 3]]
+        result = FaceBlur.clamp_faces_to_frame(faces, self.IMAGE_SHAPE)
+        assert result == [{"bbox": [10, 20, 50, 60]}]
