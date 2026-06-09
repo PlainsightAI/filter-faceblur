@@ -7,7 +7,7 @@ import urllib.request
 import cv2, subprocess
 from pathlib import Path
 
-from filter_faceblur.model.detectors.base_detector import BaseDetector
+from filter_faceblur.model.detectors.base_detector import BaseDetector, verify_sha256
 
 class YuNetDetector(BaseDetector):
     def __init__(self, model_artifact, *args, **kwargs):
@@ -28,9 +28,14 @@ class YuNetDetector(BaseDetector):
         model_name = model_url.split('/')[-1]
         weights_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent / 'weights'
         model_path = weights_dir / model_name
+        # Optional hardening: when FILTER_MODEL_SHA256 is set, the file (whether
+        # freshly downloaded or already cached) is verified before use. Unset
+        # preserves the existing trust model.
+        expected_sha = os.getenv("FILTER_MODEL_SHA256")
 
         if model_path.is_file():
             print(f"Model artifact already exists at: {model_path}")
+            verify_sha256(model_path, expected_sha, label="YuNet ONNX")
             return str(model_path)
 
         weights_dir.mkdir(parents=True, exist_ok=True)
@@ -40,6 +45,7 @@ class YuNetDetector(BaseDetector):
         else:
             self._download_model_opencv(model_url, model_path)
 
+        verify_sha256(model_path, expected_sha, label="YuNet ONNX")
         return str(model_path)
 
     def _download_model_jfrog(self, model_url, model_path, api_key, username):
@@ -69,7 +75,9 @@ class YuNetDetector(BaseDetector):
             return faces
         for detection in outs[1]:
             confidence = detection[-1]
-            if confidence > confidence_threshold:
+            # Keep at-or-above the threshold so semantics match DnnDetector.
+            # The natural reading of "minimum confidence" is "at least X".
+            if confidence >= confidence_threshold:
                 box = list(map(int, detection[:4]))
                 faces.append({
                     'bbox': box,
