@@ -123,12 +123,12 @@ class FaceBlur:
         # safe.
         faces = self.clamp_faces_to_frame(faces, frame.shape)
 
+        # Thread the accumulated `output` through each blurrer call. Every
+        # current blurrer mutates in place, so passing `frame` would have
+        # worked, but a future blurrer that returns a copy would silently
+        # drop every face except the last.
+        output = frame
         for face in faces:
-            # Extract bbox for blurring (backward compatibility)
             face_bbox = face['bbox'] if isinstance(face, dict) else face
-            output = self.blurrer.blur(frame, face_bbox, blur_strength)
-
-        if faces:
-            return output
-        else:
-            return frame
+            output = self.blurrer.blur(output, face_bbox, blur_strength)
+        return output

@@ -133,6 +133,46 @@ class TestProcessFrame:
         result = face_blur.process_frame(sample_image, faces, blur_strength=0.5)
         face_blur.blurrer.blur.assert_called_once_with(sample_image, [10, 10, 30, 30], 0.5)
 
+    def test_accumulates_output_through_copy_returning_blurrer(self, face_blur, sample_image):
+        """Every blurrer today mutates in place, but the loop must thread the
+        accumulating output through each blurrer call so a future copy-
+        returning blurrer cannot silently drop every face but the last.
+        """
+        # Mock blurrer returns a NEW array per call rather than mutating —
+        # the copy-returning case the reviewer flagged.
+        counter = {"n": 0}
+        def fake_blur(image, bbox, strength):
+            counter["n"] += 1
+            # Each call returns a distinct array tagged by call index in [0,0,0].
+            tagged = image.copy()
+            tagged[0, 0, 0] = counter["n"]
+            return tagged
+        face_blur.blurrer.blur.side_effect = fake_blur
+
+        faces = [
+            {"bbox": [10, 10, 30, 30], "confidence": 0.9},
+            {"bbox": [60, 60, 30, 30], "confidence": 0.9},
+            {"bbox": [120, 120, 30, 30], "confidence": 0.9},
+        ]
+        result = face_blur.process_frame(sample_image, faces, blur_strength=1.0)
+
+        # All three faces must have been blurred (counter is 3) AND the result
+        # must be the array from the LAST call. If the loop had passed `frame`
+        # to every call (the bug), the second/third results would have been
+        # discarded copies of the original frame, not accumulated.
+        assert counter["n"] == 3
+        assert result[0, 0, 0] == 3
+
+        # The image fed into call N+1 must be the OUTPUT of call N, not the
+        # original frame. Verify by checking call args.
+        calls = face_blur.blurrer.blur.call_args_list
+        # Call 1's input is the original frame.
+        assert calls[0].args[0] is sample_image
+        # Calls 2+ take the previous call's return value (different object).
+        for i, c in enumerate(calls[1:], start=1):
+            assert c.args[0] is not sample_image, f"call {i+1} got original frame"
+            assert c.args[0][0, 0, 0] == i, f"call {i+1} input does not match call {i} output"
+
     def test_out_of_bounds_faces_clamped_before_blurrer(self, face_blur, sample_image):
         """Defense-in-depth: callers who hit FaceBlur.process_frame directly
         (e.g. scripts/model_usage.py) must also get the safety clamp — the
