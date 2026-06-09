@@ -163,7 +163,7 @@ class TestJfrogDownload:
 
 
 class TestSha256Verification:
-    """When FILTER_MODEL_SHA256 is set, _autodownload verifies the artifact
+    """When FILTER_YUNET_SHA256 is set, _autodownload verifies the artifact
     before returning. Hits both the cache-hit path (file already on disk) and
     the fresh-download path. Unset preserves the existing trust model.
     """
@@ -171,7 +171,7 @@ class TestSha256Verification:
     def test_unset_env_skips_verification_on_cache_hit(
         self, detector, monkeypatch
     ):
-        monkeypatch.delenv("FILTER_MODEL_SHA256", raising=False)
+        monkeypatch.delenv("FILTER_YUNET_SHA256", raising=False)
         monkeypatch.setattr(Path, "is_file", lambda self: True)
         with patch(
             "filter_faceblur.model.detectors.yunet_detector.verify_sha256"
@@ -186,7 +186,7 @@ class TestSha256Verification:
     def test_set_env_invokes_verification_on_cache_hit(
         self, detector, monkeypatch
     ):
-        monkeypatch.setenv("FILTER_MODEL_SHA256", "abc123")
+        monkeypatch.setenv("FILTER_YUNET_SHA256", "abc123")
         monkeypatch.setattr(Path, "is_file", lambda self: True)
         with patch(
             "filter_faceblur.model.detectors.yunet_detector.verify_sha256"
@@ -198,7 +198,7 @@ class TestSha256Verification:
     def test_set_env_invokes_verification_after_fresh_download(
         self, detector, monkeypatch
     ):
-        monkeypatch.setenv("FILTER_MODEL_SHA256", "deadbeef")
+        monkeypatch.setenv("FILTER_YUNET_SHA256", "deadbeef")
         monkeypatch.setattr(Path, "is_file", lambda self: False)
         monkeypatch.setattr(Path, "mkdir", lambda self, **kw: None)
         with patch.object(detector, "_download_model_opencv"), patch(
@@ -209,7 +209,7 @@ class TestSha256Verification:
         assert mock_verify.call_args.args[1] == "deadbeef"
 
     def test_verification_failure_propagates(self, detector, monkeypatch):
-        monkeypatch.setenv("FILTER_MODEL_SHA256", "ff" * 32)
+        monkeypatch.setenv("FILTER_YUNET_SHA256", "ff" * 32)
         monkeypatch.setattr(Path, "is_file", lambda self: True)
         with patch(
             "filter_faceblur.model.detectors.yunet_detector.verify_sha256",

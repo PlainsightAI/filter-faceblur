@@ -28,10 +28,10 @@ class YuNetDetector(BaseDetector):
         model_name = model_url.split('/')[-1]
         weights_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent / 'weights'
         model_path = weights_dir / model_name
-        # Optional hardening: when FILTER_MODEL_SHA256 is set, the file (whether
+        # Optional hardening: when FILTER_YUNET_SHA256 is set, the file (whether
         # freshly downloaded or already cached) is verified before use. Unset
         # preserves the existing trust model.
-        expected_sha = os.getenv("FILTER_MODEL_SHA256")
+        expected_sha = os.getenv("FILTER_YUNET_SHA256")
 
         if model_path.is_file():
             print(f"Model artifact already exists at: {model_path}")
