@@ -10,7 +10,7 @@ services:
       - ./data/video-01.mp4:/video.mp4
 
   faceblur_filter:
-    image: plainsightai/openfilter-faceblur:1.4.0
+    image: plainsightai/openfilter-faceblur:1.4.1
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-}
       FILTER_ID: FaceblurFilter
