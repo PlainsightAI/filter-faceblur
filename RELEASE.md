@@ -4,6 +4,8 @@ FaceGuard release notes.
 
 ## [Unreleased]
 
+## v1.4.1 - 2026-07-01
+
 ### Changed
 
 - Bump openfilter to 1.1.2
