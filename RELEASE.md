@@ -4,6 +4,19 @@ FaceGuard release notes.
 
 ## [Unreleased]
 
+### Changed
+
+- Bump the openfilter dependency to 1.2.0
+- **Detectors:** `yunet` is now the only face detector. openfilter 1.2.0 moves
+  to OpenCV 5, which removed the backends the `haar` (`cv2.CascadeClassifier` +
+  bundled Haar cascade data) and `dnn` (`cv2.dnn.readNetFromCaffe`) detectors
+  relied on, with no headless-compatible replacement. `detector_name=haar` and
+  `detector_name=dnn` are still accepted but now soft-alias to `yunet` and log a
+  deprecation warning — existing pipelines keep running; update your config to
+  `yunet` to silence it. The `FILTER_DNN_PROTOTXT_URL`,
+  `FILTER_DNN_CAFFEMODEL_URL`, `FILTER_DNN_PROTOTXT_SHA256` and
+  `FILTER_DNN_CAFFEMODEL_SHA256` env vars are no longer used.
+
 ## v1.4.1 - 2026-07-01
 
 ### Changed

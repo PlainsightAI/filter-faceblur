@@ -44,8 +44,7 @@ class TestPostprocess:
 
     def test_at_threshold_kept(self, detector, image):
         """Boundary case: confidence exactly equal to the threshold must be
-        KEPT (>=). Aligns with DnnDetector's semantics so both detectors
-        behave identically at the boundary.
+        KEPT (>=) — the natural reading of "minimum confidence" is "at least X".
         """
         outs = (1, np.stack([_detection(10, 20, 30, 40, 0.25)]))
         result = detector._postprocess(image, outs, confidence_threshold=0.25)

@@ -1,4 +1,8 @@
+import logging
+
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class FaceBlur:
@@ -6,7 +10,10 @@ class FaceBlur:
     A class that applies face blurring to an image using a specified face detector and blurrer.
 
     Args:
-        detector_name (str): The name of the face detector to use. Available options are: "yunet", "haar", "dnn".
+        detector_name (str): The name of the face detector to use. The only
+            supported detector is "yunet". The retired "haar" and "dnn" names
+            are accepted as deprecated aliases of "yunet" (see
+            DEPRECATED_DETECTORS in shared.py) and log a warning.
         blurrer_name (str): The name of the blurrer to use. Available options are: "gaussian", "box", "median".
 
     Attributes:
@@ -20,13 +27,37 @@ class FaceBlur:
     """
 
     def __init__(self, model_artifact: str, detector_name: str, blurrer_name: str):
-        from .shared import DETECTORS, BLURRERS
+        from .shared import DETECTORS, BLURRERS, DEPRECATED_DETECTORS
+        # Map any retired detector name (haar, dnn) onto its replacement before
+        # the registry lookup, so old configs keep working after the OpenCV 5
+        # move instead of raising "not a valid key".
+        detector_name = self._resolve_detector_alias(detector_name, DEPRECATED_DETECTORS)
         # Get the detector and blurrer classes based on the provided names
         self.detector_class = self._get_instance(DETECTORS, detector_name)
         self.blurrer_class = self._get_instance(BLURRERS, blurrer_name)
         # Initialize the detector and blurrer
         self.detector = self.detector_class(model_artifact)
         self.blurrer = self.blurrer_class()
+
+    @staticmethod
+    def _resolve_detector_alias(name: str, deprecated: dict) -> str:
+        """Translate a retired detector name to its replacement, warning once.
+
+        `haar` and `dnn` were removed with the OpenCV 5 upgrade (their cv2
+        backends no longer exist). They are kept as soft aliases of `yunet` so
+        existing pipelines don't break; a warning tells operators to update
+        their config. Non-deprecated names pass through unchanged.
+        """
+        replacement = deprecated.get(name)
+        if replacement is None:
+            return name
+        logger.warning(
+            "detector_name=%r is deprecated and no longer available: OpenCV 5 "
+            "removed its backend. Falling back to %r. Set detector_name=%r to "
+            "silence this warning.",
+            name, replacement, replacement,
+        )
+        return replacement
 
     def _get_instance(self, registry, name: str) -> None:
         """

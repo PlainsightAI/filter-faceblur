@@ -117,7 +117,10 @@ class FilterFaceblur(Filter):
         # Convert to FilterFaceblurConfig
         config = FilterFaceblurConfig(**config)
         
-        # Validate detector name
+        # Validate detector name. Only 'yunet' has a live backend; 'haar' and
+        # 'dnn' were retired in the OpenCV 5 upgrade but are still accepted here
+        # as deprecated aliases (FaceBlur maps them to 'yunet' and warns), so
+        # existing configs don't fail validation on upgrade.
         valid_detectors = ['yunet', 'haar', 'dnn']
         if config.detector_name not in valid_detectors:
             raise ValueError(f"Invalid detector_name: {config.detector_name}. Must be one of {valid_detectors}")
