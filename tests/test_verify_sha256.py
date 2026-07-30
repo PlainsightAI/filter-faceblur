@@ -1,8 +1,8 @@
 """
 Tests for the shared verify_sha256 helper.
 
-Used by both YuNetDetector._autodownload and DnnDetector._download to
-optionally pin model artifacts. Unset (None / empty string) hashes are
+Used by YuNetDetector._autodownload to optionally pin the model
+artifact. Unset (None / empty string) hashes are
 a no-op (matching the existing trust model); when set, mismatches remove
 the offending file and raise ValueError so the next download attempt is
 clean.

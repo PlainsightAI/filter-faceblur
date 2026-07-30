@@ -75,8 +75,8 @@ class YuNetDetector(BaseDetector):
             return faces
         for detection in outs[1]:
             confidence = detection[-1]
-            # Keep at-or-above the threshold so semantics match DnnDetector.
-            # The natural reading of "minimum confidence" is "at least X".
+            # Keep detections at-or-above the threshold: the natural reading of
+            # "minimum confidence" is "at least X".
             if confidence >= confidence_threshold:
                 box = list(map(int, detection[:4]))
                 faces.append({
