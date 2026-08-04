@@ -16,6 +16,7 @@ FaceGuard release notes.
   `yunet` to silence it. The `FILTER_DNN_PROTOTXT_URL`,
   `FILTER_DNN_CAFFEMODEL_URL`, `FILTER_DNN_PROTOTXT_SHA256` and
   `FILTER_DNN_CAFFEMODEL_SHA256` env vars are no longer used.
+- Bump the openfilter dependency to 1.2.1
 
 ## v1.4.1 - 2026-07-01
 
