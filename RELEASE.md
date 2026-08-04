@@ -19,7 +19,7 @@ FaceGuard release notes.
   `FILTER_DNN_CAFFEMODEL_SHA256` env vars are no longer used.
 - Grant `id-token: write` in `create-release.yaml` so the public release workflow can produce a keyless (cosign) SBOM attestation for the published image (once the shared SBOM steps land).
 - Pin the Docker base to `python:3.11.12-slim` (was `python:3.11-slim`).
-- Point the `docker-compose.yaml` utility images at `containers.openfilter.io/plainsightai/openfilter-{video-in,webvis}:1.2.1` (were `:1.1.0`).
+- Point the `docker-compose.yaml` utility images at `containers.openfilter.io/plainsightai/openfilter-{video-in,webvis}:1.2.1` (were `:1.1.0`), and pin the filter's own image to the release version `plainsightai/openfilter-faceblur:1.4.2`.
 - Update dev-tooling floors (`setuptools>=83.0.0`) and switch dev pins to range pins.
 
 ## v1.4.1 - 2026-07-01
