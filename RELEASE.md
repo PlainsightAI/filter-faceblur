@@ -4,9 +4,10 @@ FaceGuard release notes.
 
 ## [Unreleased]
 
-### Changed
+## v1.4.2 - 2026-08-04
 
-- Bump the openfilter dependency to 1.2.0
+### Changed
+- Update `openfilter[all]` to `>=1.2.1`.
 - **Detectors:** `yunet` is now the only face detector. openfilter 1.2.0 moves
   to OpenCV 5, which removed the backends the `haar` (`cv2.CascadeClassifier` +
   bundled Haar cascade data) and `dnn` (`cv2.dnn.readNetFromCaffe`) detectors
@@ -16,13 +17,16 @@ FaceGuard release notes.
   `yunet` to silence it. The `FILTER_DNN_PROTOTXT_URL`,
   `FILTER_DNN_CAFFEMODEL_URL`, `FILTER_DNN_PROTOTXT_SHA256` and
   `FILTER_DNN_CAFFEMODEL_SHA256` env vars are no longer used.
-- Bump the openfilter dependency to 1.2.1
+- Grant `id-token: write` in `create-release.yaml` so the public release workflow can produce a keyless (cosign) SBOM attestation for the published image (once the shared SBOM steps land).
+- Pin the Docker base to `python:3.11.12-slim` (was `python:3.11-slim`).
+- Point the `docker-compose.yaml` utility images at `containers.openfilter.io/plainsightai/openfilter-{video-in,webvis}:1.2.1` (were `:1.1.0`), and pin the filter's own image to the release version `plainsightai/openfilter-faceblur:1.4.2`.
+- Update dev-tooling floors (`setuptools>=83.0.0`) and switch dev pins to range pins.
 
 ## v1.4.1 - 2026-07-01
 
 ### Changed
 
-- Bump openfilter to `1.1.2`
+- Update openfilter to `1.1.2`
 
 ## v1.4.0 - 2026-06-08
 
@@ -41,7 +45,7 @@ FaceGuard release notes.
 - Contract test suite for all blurrers (`tests/test_blurrers.py`) and detectors (`tests/test_detectors.py`), plus a registry/regression test (`tests/test_face_blur_registry.py`) that constructs `FaceBlur` against the real `BLURRERS`/`DETECTORS` registries for every advertised name — the existing smoke tests mocked `FaceBlur` and never exercised the lookups, which is why the missing implementations went undetected.
 
 ### Changed
-- Bump openfilter to `1.1.1` (#15).
+- Update openfilter to `1.1.1` (#15).
 - Pin `openfilter-faceblur` to `1.4.0` in `docker-compose.yaml`.
 - README: enumerate the supported `FILTER_DETECTOR_NAME` / `FILTER_BLURRER_NAME` values; document the new DNN URL and SHA-256 env vars.
 - `model.py` class docstring: list all detector/blurrer options.
@@ -49,13 +53,13 @@ FaceGuard release notes.
 ## v1.3.0 - 2026-05-21
 
 ### Changed
-- Bump openfilter to `1.1.0` (#13).
+- Update openfilter to `1.1.0` (#13).
 - Update `docker-compose.yaml` and `docker-compose.local.yaml` builtin openfilter images (`openfilter-video-in`, `openfilter-webvis`) to `1.1.0` to match the SDK; pin `openfilter-faceblur` to `1.3.0`.
 
 ## v1.2.0 - 2026-05-21
 
 ### Changed
-- Bump openfilter to `1.0.0` (major SDK release) (#11)
+- Update openfilter to `1.0.0` (major SDK release) (#11)
 - Update `docker-compose.yaml` and `docker-compose.local.yaml` to the `1.0.0` builtin openfilter images (`openfilter-video-in`, `openfilter-webvis`) and pin `openfilter-faceblur` to `1.2.0`. The local compose file was also pointing at an older `v0.1.10` builtin tag that predates the main compose file's `0.1.27` — both now align on `1.0.0`.
 
 ### Fixed
@@ -64,18 +68,17 @@ FaceGuard release notes.
 - Drop `shell=True` from the JFrog `curl` invocation in favour of an argv list, eliminating a command-injection vector through interpolated credentials and URL.
 
 ### Dependencies
-- Bump `python-dotenv` 1.0.1 → 1.2.2 (#4)
-- Bump `setuptools` 72.2.0 → 78.1.1 (dev) (#7)
-- Bump `pytest` 8.3.4 → 9.0.3 (dev) (#8)
-- Bump `wheel` 0.44.0 → 0.46.2 (dev) (#9)
+- Update `python-dotenv` 1.0.1 → 1.2.2 (#4)
+- Update `setuptools` 72.2.0 → 78.1.1 (dev) (#7)
+- Update `pytest` 8.3.4 → 9.0.3 (dev) (#8)
+- Update `wheel` 0.44.0 → 0.46.2 (dev) (#9)
 
 ## v1.1.10 - 2026-04-23
 
 ### Changed
-- Bump openfilter SDK, align CI workflow with shared release gate (source-paths)
+- Update the openfilter dependency to `>=0.1.30`, and align the CI workflow with the shared release gate (source-paths).
 
 - Fix release workflow secret names: `PYPI_API_TOKEN` → `PLAINSIGHT_PYPI_TOKEN`, `DOCKERHUB_TOKEN` → `DOCKERHUB_ACCESS_TOKEN` (org-level secret names). Without this the PyPI / Docker Hub tokens resolved to empty and no package has been published since the migration.
-- Bump openfilter dependency to `>=0.1.30`.
 
 ## v1.1.9 - 2026-04-23
 
@@ -100,7 +103,7 @@ FaceGuard release notes.
 
 ### Changed
 - Add CI/CD workflows: create-release.yaml (Docker Hub publishing), ci.yaml (PR testing), security-scan.yaml
-- Bump openfilter dependency to >=0.1.27
+- Update openfilter dependency to >=0.1.27
 - Update Makefile IMAGE to Docker Hub path
 
 
