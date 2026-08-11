@@ -4,9 +4,12 @@ FaceGuard release notes.
 
 ## [Unreleased]
 
+## v1.4.3 - 2026-08-10
+
 ### Changed
 
-- Bump the openfilter dependency to 1.2.2
+- Build the image on `openfilter-base` (weekly apt-upgraded python-slim) instead of a stale `python:X.Y.Z-slim` pin, clearing the OS-package CVEs the pin carried.
+- Update the openfilter dependency to 1.2.2
 
 ## v1.4.2 - 2026-08-04
 
@@ -102,14 +105,12 @@ FaceGuard release notes.
 - Remove redundant ci.yaml (shared workflow handles PR testing)
 - Add push + pull_request triggers to create-release.yaml
 
-
 ## v1.1.5 - 2026-04-15
 
 ### Changed
 - Add CI/CD workflows: create-release.yaml (Docker Hub publishing), ci.yaml (PR testing), security-scan.yaml
 - Update openfilter dependency to >=0.1.27
 - Update Makefile IMAGE to Docker Hub path
-
 
 ## v1.1.4 - 2025-09-27
 ### Changed

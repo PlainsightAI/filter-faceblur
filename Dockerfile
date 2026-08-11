@@ -1,11 +1,8 @@
 # syntax=docker/dockerfile:1.4
-FROM python:3.11.12-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-RUN useradd -ms /bin/bash appuser
-WORKDIR /app
+# openfilter-base = python:3.11-slim + all outstanding Debian security patches
+# (rebuilt weekly): provides the PYTHONDONTWRITEBYTECODE/PYTHONUNBUFFERED env, the
+# appuser account, and /app (WORKDIR) + /app/logs — so none of that is repeated here.
+FROM plainsightai/openfilter-base:py3.11
 
 # Copy model files
 COPY ./filter_faceblur/model .
@@ -31,9 +28,6 @@ RUN set -eux; \
     WEIGHTS_DIR="$(python -c 'import os, filter_faceblur; print(os.path.join(os.path.dirname(filter_faceblur.__file__), "model", "weights"))')"; \
     mkdir -p "$WEIGHTS_DIR"; \
     chown -R appuser:appuser "$WEIGHTS_DIR"
-
-# Create a writable logs dir and hand over /app to appuser
-RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 
 USER appuser
 CMD ["python", "-m", "filter_faceblur.filter"]
