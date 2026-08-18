@@ -4,9 +4,14 @@ FaceGuard release notes.
 
 ## [Unreleased]
 
+## v1.4.4 - 2026-08-18
+
 ### Changed
 
-- Bump the openfilter dependency to 1.3.0
+- Update the openfilter dependency to 1.3.0
+- Add Python 3.14 support: raise the `requires-python` ceiling to `<3.15` and add 3.14 to the CI
+  test matrix (3.10–3.13 unchanged). The image base moves to `py3.14` in a follow-up, once a
+  3.14-supporting wheel is published.
 
 ## v1.4.3 - 2026-08-10
 
