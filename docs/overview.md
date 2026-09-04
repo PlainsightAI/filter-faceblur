@@ -2,6 +2,7 @@
 title: FaceGuard
 sidebar_label: Overview
 sidebar_position: 1
+slug: /filters/faceguard/overview
 ---
 
 import Admonition from '@theme/Admonition';
