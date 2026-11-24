@@ -4,6 +4,8 @@ FaceGuard release notes.
 
 ## [Unreleased]
 
+## v1.4.7 - 2026-11-24
+
 ### Changed
 
 - Bump the openfilter dependency to 1.5.0
